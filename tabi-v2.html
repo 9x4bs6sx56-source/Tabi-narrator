@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Tabi v2</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Zen+Antique&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap');
+
+:root {
+–ink: #1c1c1a;
+–paper: #f0ebe0;
+–card: #e8e2d5;
+–accent: #c94f2a;
+–green: #2a6e4a;
+–muted: #8a8070;
+–border: rgba(28,28,26,0.12);
+–shinkansen: #0066cc;
+–metro-osaka: #e4000f;
+–metro-tokyo: #f39700;
+–jr: #008e42;
+}
+
+- { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+body {
+background: var(–paper);
+color: var(–ink);
+font-family: ‘DM Mono’, monospace;
+min-height: 100dvh;
+display: flex;
+flex-direction: column;
+overflow: hidden;
+}
+
+/* ── Setup / API Key screen ── */
+.screen { position:fixed; inset:0; background:var(–paper); z-index:200; display:flex; flex-direction:column; padding:48px 28px 40px; }
+.screen.hidden { display:none; }
+
+.logo-lg { font-family:‘Zen Antique’, serif; font-size:42px; color:var(–ink); letter-spacing:-1px; }
+.logo-lg span { color:var(–accent); }
+.tagline { font-size:11px; color:var(–muted); letter-spacing:0.08em; margin-top:4px; }
+
+.setup-label { font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(–muted); margin-bottom:8px; }
+.setup-input {
+width:100%; background:var(–card); border:1px solid var(–border);
+border-radius:2px; padding:14px; font-family:‘DM Mono’,monospace;
+font-size:13px; color:var(–ink); outline:none;
+}
+.setup-input:focus { border-color:var(–accent); }
+.setup-warn { font-size:10px; color:var(–muted); line-height:1.6; padding:10px 12px; border:1px solid var(–border); border-radius:2px; }
+.btn-primary {
+width:100%; background:var(–accent); color:white; border:none;
+border-radius:2px; padding:16px; font-family:‘DM Mono’,monospace;
+font-size:11px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer;
+}
+.btn-primary:hover { filter:brightness(1.1); }
+.btn-secondary {
+width:100%; background:transparent; color:var(–ink); border:1px solid var(–border);
+border-radius:2px; padding:14px; font-family:‘DM Mono’,monospace;
+font-size:11px; letter-spacing:0.08em; cursor:pointer;
+}
+
+/* ── Route setup screen ── */
+#routeScreen { gap:20px; overflow-y:auto; }
+.route-title { font-family:‘Zen Antique’,serif; font-size:26px; line-height:1.3; }
+.route-sub { font-size:11px; color:var(–muted); line-height:1.7; }
+
+.line-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.line-btn {
+background:var(–card); border:2px solid transparent; border-radius:2px;
+padding:12px 10px; font-family:‘DM Mono’,monospace; font-size:11px;
+cursor:pointer; text-align:left; transition:all 0.15s;
+}
+.line-btn.selected { border-color:var(–accent); background:white; }
+.line-btn .line-dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; }
+.line-btn .line-name { font-size:10px; color:var(–muted); display:block; margin-top:2px; }
+
+select.setup-input { appearance:none; cursor:pointer; }
+
+/* ── Main app ── */
+#mainApp { display:none; flex-direction:column; height:100dvh; }
+#mainApp.visible { display:flex; }
+
+/* Header */
+.app-header {
+padding:16px 20px 12px; display:flex; align-items:center; gap:10px;
+border-bottom:1px solid var(–border); flex-shrink:0;
+}
+.logo-sm { font-family:‘Zen Antique’,serif; font-size:22px; color:var(–ink); }
+.logo-sm span { color:var(–accent); }
+.line-badge {
+font-size:9px; letter-spacing:0.08em; text-transform:uppercase;
+padding:3px 8px; border-radius:20px; color:white; font-weight:500;
+}
+.reset-btn { margin-left:auto; font-size:10px; color:var(–muted); cursor:pointer; background:none; border:none; font-family:‘DM Mono’,monospace; }
+
+/* Journey strip */
+.journey-strip {
+padding:12px 20px; border-bottom:1px solid var(–border);
+display:flex; align-items:center; gap:0; overflow-x:auto;
+scrollbar-width:none; flex-shrink:0;
+}
+.journey-strip::-webkit-scrollbar { display:none; }
+.stop-item { display:flex; align-items:center; gap:0; flex-shrink:0; }
+.stop-dot {
+width:10px; height:10px; border-radius:50%; background:var(–muted);
+border:2px solid var(–muted); flex-shrink:0; transition:all 0.3s;
+}
+.stop-dot.current { background:var(–accent); border-color:var(–accent); width:13px; height:13px; }
+.stop-dot.visited { background:var(–ink); border-color:var(–ink); }
+.stop-line { width:24px; height:2px; background:var(–muted); }
+.stop-label {
+position:absolute; font-size:9px; color:var(–muted); white-space:nowrap;
+transform:translateX(-50%); top:16px; letter-spacing:0.04em;
+}
+.stop-wrapper { position:relative; display:flex; flex-direction:column; align-items:center; }
+.stop-wrapper.current .stop-label { color:var(–accent); font-weight:500; }
+
+/* Content */
+.content { flex:1; overflow-y:auto; padding:16px 20px; display:flex; flex-direction:column; gap:12px; }
+
+/* Station hero */
+.station-hero {
+background:var(–ink); color:var(–paper); border-radius:2px; padding:20px;
+animation:fadeUp 0.4s ease;
+}
+.station-hero .sh-label { font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:rgba(240,235,224,0.5); margin-bottom:6px; }
+.station-hero .sh-name { font-family:‘Zen Antique’,serif; font-size:28px; line-height:1.2; }
+.station-hero .sh-next { font-size:11px; color:rgba(240,235,224,0.6); margin-top:8px; }
+
+/* Cards */
+.narr-card { background:var(–card); border-radius:2px; padding:16px; border-left:3px solid var(–accent); animation:fadeUp 0.35s ease; }
+.narr-card.landmark { border-left-color:var(–green); }
+.narr-card.query { border-left-color:var(–shinkansen); }
+.card-label { font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:var(–muted); margin-bottom:8px; }
+.card-text { font-family:‘Zen Antique’,serif; font-size:15px; line-height:1.75; color:var(–ink); }
+
+@keyframes fadeUp { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+
+/* Empty */
+.empty { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:8px; opacity:0.45; padding:32px; }
+.empty-icon { font-size:36px; }
+.empty-title { font-family:‘Zen Antique’,serif; font-size:18px; }
+.empty-sub { font-size:11px; color:var(–muted); line-height:1.6; max-width:220px; }
+
+/* Controls */
+.controls { padding:12px 20px 28px; border-top:1px solid var(–border); display:flex; flex-direction:column; gap:10px; flex-shrink:0; }
+
+.query-row { display:flex; gap:8px; }
+.query-input {
+flex:1; background:var(–card); border:1px solid var(–border);
+border-radius:2px; padding:10px 12px; font-family:‘DM Mono’,monospace;
+font-size:12px; color:var(–ink); outline:none;
+}
+.query-input:focus { border-color:var(–accent); }
+.query-input::placeholder { color:var(–muted); font-style:italic; }
+.ask-btn {
+background:var(–ink); color:var(–paper); border:none; border-radius:2px;
+padding:10px 14px; font-family:‘DM Mono’,monospace; font-size:11px; cursor:pointer;
+}
+.ask-btn:hover { background:var(–accent); }
+.ask-btn:disabled { background:var(–muted); cursor:not-allowed; }
+
+.nav-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+.nav-btn {
+background:var(–card); border:1px solid var(–border); border-radius:2px;
+padding:12px 8px; font-family:‘DM Mono’,monospace; font-size:10px;
+letter-spacing:0.04em; cursor:pointer; text-align:center; transition:all 0.15s;
+}
+.nav-btn:hover { border-color:var(–ink); }
+.nav-btn.primary { background:var(–accent); color:white; border-color:var(–accent); font-size:11px; }
+.nav-btn.primary:hover { filter:brightness(1.1); }
+.nav-btn:disabled { opacity:0.4; cursor:not-allowed; }
+
+/* Loading pulse */
+.loading-card { background:var(–card); border-radius:2px; padding:16px; border-left:3px solid var(–border); }
+.pulse { display:flex; gap:4px; align-items:center; height:16px; }
+.pulse span { width:4px; height:4px; border-radius:50%; background:var(–muted); animation:pulse 1.2s infinite; }
+.pulse span:nth-child(2) { animation-delay:0.2s; }
+.pulse span:nth-child(3) { animation-delay:0.4s; }
+@keyframes pulse { 0%,80%,100%{opacity:0.2} 40%{opacity:1} }
+</style>
+
+</head>
+<body>
+
+<!-- API Key Screen -->
+
+<div class="screen" id="apiScreen">
+  <div style="margin-bottom:32px;">
+    <div class="logo-lg">Tabi<span>.</span></div>
+    <div class="tagline">旅 v2 — route narrator</div>
+  </div>
+  <div style="flex:1; display:flex; flex-direction:column; gap:16px; justify-content:center;">
+    <div class="route-title">Your API key<br>lives here.</div>
+    <div class="route-sub">Stored only in your browser. Never sent anywhere except Anthropic's API directly.</div>
+    <div>
+      <div class="setup-label">Anthropic API Key</div>
+      <input class="setup-input" type="password" id="apiKeyInput" placeholder="sk-ant-api03-..." autocomplete="off" spellcheck="false">
+    </div>
+    <div class="setup-warn">⚠ Never paste your API key into a chat window.</div>
+    <button class="btn-primary" onclick="saveApiKey()">Continue →</button>
+  </div>
+</div>
+
+<!-- Route Setup Screen -->
+
+<div class="screen hidden" id="routeScreen">
+  <div style="margin-bottom:24px;">
+    <div class="logo-lg">Tabi<span>.</span></div>
+    <div class="tagline">旅 — set your route</div>
+  </div>
+
+  <div style="flex:1; display:flex; flex-direction:column; gap:18px; overflow-y:auto;">
+    <div>
+      <div class="setup-label">Select line</div>
+      <div class="line-grid" id="lineGrid">
+        <button class="line-btn" data-line="tokaido-shinkansen" onclick="selectLine(this)">
+          <span class="line-dot" style="background:#0066cc"></span>東海道新幹線
+          <span class="line-name">Tokaido Shinkansen</span>
+        </button>
+        <button class="line-btn" data-line="sanyo-shinkansen" onclick="selectLine(this)">
+          <span class="line-dot" style="background:#0066cc"></span>山陽新幹線
+          <span class="line-name">Sanyo Shinkansen</span>
+        </button>
+        <button class="line-btn" data-line="osaka-midosuji" onclick="selectLine(this)">
+          <span class="line-dot" style="background:#e4000f"></span>御堂筋線
+          <span class="line-name">Osaka Metro Midosuji</span>
+        </button>
+        <button class="line-btn" data-line="osaka-tanimachi" onclick="selectLine(this)">
+          <span class="line-dot" style="background:#8f76d6"></span>谷町線
+          <span class="line-name">Osaka Metro Tanimachi</span>
+        </button>
+        <button class="line-btn" data-line="tokyo-yamanote" onclick="selectLine(this)">
+          <span class="line-dot" style="background:#80c241"></span>山手線
+          <span class="line-name">JR Yamanote Line</span>
+        </button>
+        <button class="line-btn" data-line="tokyo-ginza" onclick="selectLine(this)">
+          <span class="line-dot" style="background:#f39700"></span>銀座線
+          <span class="line-name">Tokyo Metro Ginza</span>
+        </button>
+        <button class="line-btn" data-line="tokyo-marunouchi" onclick="selectLine(this)">
+          <span class="line-dot" style="background:#e60012"></span>丸ノ内線
+          <span class="line-name">Tokyo Metro Marunouchi</span>
+        </button>
+        <button class="line-btn" data-line="jr-osaka-loop" onclick="selectLine(this)">
+          <span class="line-dot" style="background:#008e42"></span>大阪環状線
+          <span class="line-name">JR Osaka Loop</span>
+        </button>
+      </div>
+    </div>
+
+```
+<div id="directionWrap" style="display:none;">
+  <div class="setup-label">Direction</div>
+  <select class="setup-input" id="directionSelect"></select>
+</div>
+
+<div id="startWrap" style="display:none;">
+  <div class="setup-label">Boarding at</div>
+  <select class="setup-input" id="startSelect"></select>
+</div>
+
+<button class="btn-primary" id="startJourneyBtn" style="display:none;" onclick="startJourney()">Start journey →</button>
+<button class="btn-secondary" onclick="showApiScreen()">← Change API key</button>
+```
+
+  </div>
+</div>
+
+<!-- Main App -->
+
+<div id="mainApp">
+  <div class="app-header">
+    <div class="logo-sm">Tabi<span>.</span></div>
+    <div class="line-badge" id="lineBadge">—</div>
+    <button class="reset-btn" onclick="showRouteScreen()">change route</button>
+  </div>
+
+  <!-- Journey strip -->
+
+  <div class="journey-strip" id="journeyStrip"></div>
+
+  <!-- Content -->
+
+  <div class="content" id="content">
+    <div class="empty" id="emptyState">
+      <div class="empty-icon">🚃</div>
+      <div class="empty-title">Journey started</div>
+      <div class="empty-sub">Narration loading for your current station...</div>
+    </div>
+  </div>
+
+  <!-- Controls -->
+
+  <div class="controls">
+    <div class="query-row">
+      <input class="query-input" id="queryInput" type="text" placeholder="ask anything about your journey..." />
+      <button class="ask-btn" id="askBtn" onclick="submitQuery()">Ask</button>
+    </div>
+    <div class="nav-row">
+      <button class="nav-btn" onclick="prevStop()" id="prevBtn">← prev</button>
+      <button class="nav-btn primary" onclick="nextStop()" id="nextBtn">Next stop →</button>
+      <button class="nav-btn" onclick="askWhatsAhead()" id="aheadBtn">coming up?</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Line data ─────────────────────────────────────────────────────────────────
+const LINES = {
+  'tokaido-shinkansen': {
+    name: 'Tokaido Shinkansen',
+    color: '#0066cc',
+    directions: ['Tokyo → Osaka', 'Osaka → Tokyo'],
+    stops: {
+      'Tokyo → Osaka': ['Tokyo','Shinagawa','Shin-Yokohama','Odawara','Atami','Mishima','Shin-Fuji','Shizuoka','Kakegawa','Hamamatsu','Toyohashi','Mikawa-Anjo','Nagoya','Gifu-Hashima','Maibara','Kyoto','Shin-Osaka'],
+      'Osaka → Tokyo': ['Shin-Osaka','Kyoto','Maibara','Gifu-Hashima','Nagoya','Mikawa-Anjo','Toyohashi','Hamamatsu','Kakegawa','Shizuoka','Shin-Fuji','Mishima','Atami','Odawara','Shin-Yokohama','Shinagawa','Tokyo']
+    }
+  },
+  'sanyo-shinkansen': {
+    name: 'Sanyo Shinkansen',
+    color: '#0066cc',
+    directions: ['Shin-Osaka → Hakata', 'Hakata → Shin-Osaka'],
+    stops: {
+      'Shin-Osaka → Hakata': ['Shin-Osaka','Shin-Kobe','Nishi-Akashi','Himeji','Aioi','Okayama','Shin-Kurashiki','Fukuyama','Shin-Onomichi','Mihara','Higashihiroshima','Hiroshima','Shin-Iwakuni','Tokuyama','Shin-Yamaguchi','Asa','Shin-Shimonoseki','Kokura','Hakata'],
+      'Hakata → Shin-Osaka': ['Hakata','Kokura','Shin-Shimonoseki','Asa','Shin-Yamaguchi','Tokuyama','Shin-Iwakuni','Hiroshima','Higashihiroshima','Mihara','Shin-Onomichi','Fukuyama','Shin-Kurashiki','Okayama','Aioi','Himeji','Nishi-Akashi','Shin-Kobe','Shin-Osaka']
+    }
+  },
+  'osaka-midosuji': {
+    name: 'Osaka Metro Midosuji',
+    color: '#e4000f',
+    directions: ['Senri-chuo → Nakamozu', 'Nakamozu → Senri-chuo'],
+    stops: {
+      'Senri-chuo → Nakamozu': ['Senri-chuo','Momoyamadai','Shirokita','Esaka','Higashi-Mikuni','Shin-Osaka','Nishi-Nakajima-Minamigata','Nakatsu','Umeda','Higashi-Umeda','Shinsaibashi','Namba','Daikokucho','Tengachaya','Kishinosato-Tamade','Nakamozu'],
+      'Nakamozu → Senri-chuo': ['Nakamozu','Kishinosato-Tamade','Tengachaya','Daikokucho','Namba','Shinsaibashi','Higashi-Umeda','Umeda','Nakatsu','Nishi-Nakajima-Minamigata','Shin-Osaka','Higashi-Mikuni','Esaka','Shirokita','Momoyamadai','Senri-chuo']
+    }
+  },
+  'osaka-tanimachi': {
+    name: 'Osaka Metro Tanimachi',
+    color: '#8f76d6',
+    directions: ['Dainichi → Yaominami', 'Yaominami → Dainichi'],
+    stops: {
+      'Dainichi → Yaominami': ['Dainichi','Sone','Minoodaira','Kita-Senri','Minami-Senri','Senrioka','Shijonawate','Kadoma-Minami','Nozato','Shigino','Daikoku','Namba','Tanimachi-Nanachome','Tanimachi-Rokuchome','Tanimachi-Yonchome','Higashi-Umeda','Temma','Osaka-Tennoji','Yaominami'],
+      'Yaominami → Dainichi': ['Yaominami','Osaka-Tennoji','Temma','Higashi-Umeda','Tanimachi-Yonchome','Tanimachi-Rokuchome','Tanimachi-Nanachome','Namba','Daikoku','Shigino','Nozato','Kadoma-Minami','Shijonawate','Senrioka','Minami-Senri','Kita-Senri','Minoodaira','Sone','Dainichi']
+    }
+  },
+  'tokyo-yamanote': {
+    name: 'JR Yamanote Line',
+    color: '#80c241',
+    directions: ['Clockwise (Outer)', 'Counter-clockwise (Inner)'],
+    stops: {
+      'Clockwise (Outer)': ['Tokyo','Kanda','Akihabara','Okachimachi','Ueno','Uguisudani','Nippori','Nishi-Nippori','Tabata','Komagome','Sugamo','Otsuka','Ikebukuro','Mejiro','Takadanobaba','Shin-Okubo','Shinjuku','Yoyogi','Harajuku','Shibuya','Ebisu','Meguro','Gotanda','Osaki','Shinagawa','Tamachi','Hamamatsucho','Shimbashi','Yurakucho'],
+      'Counter-clockwise (Inner)': ['Tokyo','Yurakucho','Shimbashi','Hamamatsucho','Tamachi','Shinagawa','Osaki','Gotanda','Meguro','Ebisu','Shibuya','Harajuku','Yoyogi','Shinjuku','Shin-Okubo','Takadanobaba','Mejiro','Ikebukuro','Otsuka','Sugamo','Komagome','Tabata','Nishi-Nippori','Nippori','Uguisudani','Ueno','Okachimachi','Akihabara','Kanda']
+    }
+  },
+  'tokyo-ginza': {
+    name: 'Tokyo Metro Ginza Line',
+    color: '#f39700',
+    directions: ['Asakusa → Shibuya', 'Shibuya → Asakusa'],
+    stops: {
+      'Asakusa → Shibuya': ['Asakusa','Tawaramachi','Inaricho','Ueno','Ueno-Hirokoji','Suehirocho','Kanda','Mitsukoshimae','Nihombashi','Kyobashi','Ginza','Shimbashi','Toranomon','Akasaka-Mitsuke','Nagatacho','Aoyama-Itchome','Gaienmae','Omotesando','Shibuya'],
+      'Shibuya → Asakusa': ['Shibuya','Omotesando','Gaienmae','Aoyama-Itchome','Nagatacho','Akasaka-Mitsuke','Toranomon','Shimbashi','Ginza','Kyobashi','Nihombashi','Mitsukoshimae','Kanda','Suehirocho','Ueno-Hirokoji','Ueno','Inaricho','Tawaramachi','Asakusa']
+    }
+  },
+  'tokyo-marunouchi': {
+    name: 'Tokyo Metro Marunouchi Line',
+    color: '#e60012',
+    directions: ['Ogikubo → Ikebukuro', 'Ikebukuro → Ogikubo'],
+    stops: {
+      'Ogikubo → Ikebukuro': ['Ogikubo','Minami-Asagaya','Shin-Koenji','Higashi-Koenji','Shin-Nakano','Nakano-Sakaue','Nishi-Shinjuku','Shinjuku','Shinjuku-Sanchome','Shin-Tomicho','Akasaka-Mitsuke','Tokyo','Otemachi','Awajicho','Shin-Ochanomizu','Hongo-Sanchome','Korakuen','Myogadani','Shin-Okubo','Ikebukuro'],
+      'Ikebukuro → Ogikubo': ['Ikebukuro','Shin-Okubo','Myogadani','Korakuen','Hongo-Sanchome','Shin-Ochanomizu','Awajicho','Otemachi','Tokyo','Akasaka-Mitsuke','Shin-Tomicho','Shinjuku-Sanchome','Shinjuku','Nishi-Shinjuku','Nakano-Sakaue','Shin-Nakano','Higashi-Koenji','Shin-Koenji','Minami-Asagaya','Ogikubo']
+    }
+  },
+  'jr-osaka-loop': {
+    name: 'JR Osaka Loop Line',
+    color: '#008e42',
+    directions: ['Clockwise (Outer)', 'Counter-clockwise (Inner)'],
+    stops: {
+      'Clockwise (Outer)': ['Osaka','Fukushima','Noda','Nishikujo','Bentenchô','Shimbamba','Taisho','Ashiharabashi','Imamiya','Shin-Imamiya','Tengachaya','Kishimoto-Moto','Teradamachi','Tamatsukuri','Morinomiya','Osaka-Jokoen','Tsuruhashi','Tamade','Higashi-Osaka','Osaka'],
+      'Counter-clockwise (Inner)': ['Osaka','Higashi-Osaka','Tamade','Tsuruhashi','Tamatsukuri','Morinomiya','Osaka-Jokoen','Teradamachi','Kishimoto-Moto','Tengachaya','Shin-Imamiya','Imamiya','Ashiharabashi','Taisho','Shimbamba','Bentenchô','Nishikujo','Noda','Fukushima','Osaka']
+    }
+  }
+};
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let apiKey = '';
+let selectedLine = null;
+let selectedDirection = null;
+let stops = [];
+let currentStopIndex = 0;
+let isLoading = false;
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('tabi_api_key');
+  if (saved) { apiKey = saved; showRouteScreen(); }
+  document.getElementById('queryInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') submitQuery();
+  });
+});
+
+// ── API key ───────────────────────────────────────────────────────────────────
+function saveApiKey() {
+  const val = document.getElementById('apiKeyInput').value.trim();
+  if (!val.startsWith('sk-ant-')) { alert('That doesn\'t look like an Anthropic API key.'); return; }
+  apiKey = val;
+  localStorage.setItem('tabi_api_key', val);
+  showRouteScreen();
+}
+
+function showApiScreen() {
+  document.getElementById('apiScreen').classList.remove('hidden');
+  document.getElementById('routeScreen').classList.add('hidden');
+  document.getElementById('mainApp').classList.remove('visible');
+}
+
+// ── Route setup ───────────────────────────────────────────────────────────────
+function showRouteScreen() {
+  document.getElementById('apiScreen').classList.add('hidden');
+  document.getElementById('routeScreen').classList.remove('hidden');
+  document.getElementById('mainApp').classList.remove('visible');
+}
+
+function selectLine(btn) {
+  document.querySelectorAll('.line-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedLine = btn.dataset.line;
+  const line = LINES[selectedLine];
+
+  // Populate direction
+  const dirSelect = document.getElementById('directionSelect');
+  dirSelect.innerHTML = line.directions.map(d => `<option value="${d}">${d}</option>`).join('');
+  document.getElementById('directionWrap').style.display = 'block';
+  dirSelect.onchange = () => updateStartStops();
+  updateStartStops();
+}
+
+function updateStartStops() {
+  const line = LINES[selectedLine];
+  selectedDirection = document.getElementById('directionSelect').value;
+  const stopsForDir = line.stops[selectedDirection];
+  const startSelect = document.getElementById('startSelect');
+  startSelect.innerHTML = stopsForDir.map((s,i) => `<option value="${i}">${s}</option>`).join('');
+  document.getElementById('startWrap').style.display = 'block';
+  document.getElementById('startJourneyBtn').style.display = 'block';
+}
+
+function startJourney() {
+  if (!selectedLine) { alert('Please select a line.'); return; }
+  const line = LINES[selectedLine];
+  selectedDirection = document.getElementById('directionSelect').value;
+  stops = line.stops[selectedDirection];
+  currentStopIndex = parseInt(document.getElementById('startSelect').value);
+
+  // Update badge
+  const badge = document.getElementById('lineBadge');
+  badge.textContent = line.name;
+  badge.style.background = line.color;
+
+  document.getElementById('routeScreen').classList.add('hidden');
+  document.getElementById('mainApp').classList.add('visible');
+
+  renderJourneyStrip();
+  clearContent();
+  narrateCurrentStop();
+}
+
+// ── Journey strip ─────────────────────────────────────────────────────────────
+function renderJourneyStrip() {
+  const strip = document.getElementById('journeyStrip');
+  strip.innerHTML = '';
+  stops.forEach((stop, i) => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'stop-wrapper' + (i === currentStopIndex ? ' current' : '');
+    wrapper.style.position = 'relative';
+    wrapper.style.paddingBottom = '18px';
+
+    const dot = document.createElement('div');
+    dot.className = 'stop-dot' + (i === currentStopIndex ? ' current' : i < currentStopIndex ? ' visited' : '');
+
+    const label = document.createElement('div');
+    label.className = 'stop-label';
+    label.textContent = stop;
+
+    wrapper.appendChild(dot);
+    wrapper.appendChild(label);
+    strip.appendChild(wrapper);
+
+    if (i < stops.length - 1) {
+      const line = document.createElement('div');
+      line.className = 'stop-line';
+      line.style.background = i < currentStopIndex ? 'var(--ink)' : 'var(--muted)';
+      strip.appendChild(line);
+    }
+  });
+
+  // Scroll current stop into view
+  const currentWrapper = strip.querySelectorAll('.stop-wrapper')[currentStopIndex];
+  if (currentWrapper) currentWrapper.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+}
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+function nextStop() {
+  if (currentStopIndex >= stops.length - 1) return;
+  currentStopIndex++;
+  renderJourneyStrip();
+  clearContent();
+  narrateCurrentStop();
+}
+
+function prevStop() {
+  if (currentStopIndex <= 0) return;
+  currentStopIndex--;
+  renderJourneyStrip();
+  clearContent();
+  narrateCurrentStop();
+}
+
+function askWhatsAhead() {
+  if (currentStopIndex >= stops.length - 1) return;
+  const nextStopName = stops[currentStopIndex + 1];
+  const current = stops[currentStopIndex];
+  const line = LINES[selectedLine].name;
+  callClaude(
+    `You are Tabi, a warm and witty travel narrator on the ${line}.
+The traveler is currently at ${current} and heading toward ${nextStopName}.
+Tell them 2-3 interesting things to look out for between these stations — scenery, landmarks visible from the train window, cultural tidbits about what they're passing through. Be specific and vivid. Keep it to 3-4 sentences.
+Respond with ONLY the narration. No preamble.`,
+    'landmark',
+    '🔭 coming up'
+  );
+}
+
+// ── Narration ─────────────────────────────────────────────────────────────────
+function narrateCurrentStop() {
+  const stop = stops[currentStopIndex];
+  const line = LINES[selectedLine].name;
+  const direction = selectedDirection;
+  const isFirst = currentStopIndex === 0;
+  const isLast = currentStopIndex === stops.length - 1;
+  const nextStop = !isLast ? stops[currentStopIndex + 1] : null;
+
+  // Update station hero
+  const content = document.getElementById('content');
+  const hero = document.createElement('div');
+  hero.className = 'station-hero';
+  hero.innerHTML = `
+    <div class="sh-label">now at</div>
+    <div class="sh-name">${stop}</div>
+    ${nextStop ? `<div class="sh-next">next → ${nextStop}</div>` : '<div class="sh-next">final stop</div>'}
+  `;
+  content.insertBefore(hero, content.firstChild);
+
+  // Update nav buttons
+  document.getElementById('prevBtn').disabled = currentStopIndex === 0;
+  document.getElementById('nextBtn').disabled = currentStopIndex >= stops.length - 1;
+  document.getElementById('aheadBtn').disabled = currentStopIndex >= stops.length - 1;
+
+  const prompt = `You are Tabi, a warm, witty, and knowledgeable travel narrator on the ${line} (${direction}).
+The traveler has just arrived at or is passing through: ${stop}.
+${isFirst ? 'This is their starting station.' : ''}${isLast ? 'This is their final destination!' : ''}
+
+Give a short, engaging narration (2-4 sentences) about this station or the area around it. Include one surprising, specific, or little-known fact. Be like a knowledgeable friend — warm, direct, occasionally funny. Not a tour guide script.
+
+Respond with ONLY the narration text. No preamble, no labels.`;
+
+  callClaude(prompt, 'narration', '📍 ' + stop);
+}
+
+// ── Query ─────────────────────────────────────────────────────────────────────
+async function submitQuery() {
+  const input = document.getElementById('queryInput');
+  const query = input.value.trim();
+  if (!query || isLoading) return;
+  input.value = '';
+
+  const stop = stops[currentStopIndex];
+  const line = LINES[selectedLine].name;
+  const nextStopName = currentStopIndex < stops.length - 1 ? stops[currentStopIndex + 1] : 'final stop';
+
+  const prompt = `You are Tabi, a helpful travel companion on the ${line}.
+The traveler is currently at ${stop} (next stop: ${nextStopName}).
+
+They ask: "${query}"
+
+Answer helpfully and concisely (3-5 sentences max). Use their exact location — never guess elsewhere. If asking about food, toilets, transport connections, or sights, give your best specific answer for ${stop}. Warm and direct.
+
+Respond with ONLY your answer. No preamble.`;
+
+  callClaude(prompt, 'query', '💬 you asked');
+}
+
+// ── Claude API ────────────────────────────────────────────────────────────────
+async function callClaude(prompt, cardType, label) {
+  if (isLoading) return;
+  isLoading = true;
+  document.getElementById('askBtn').disabled = true;
+
+  const empty = document.getElementById('emptyState');
+  if (empty) empty.remove();
+
+  // Loading card
+  const loading = document.createElement('div');
+  loading.className = 'loading-card';
+  loading.innerHTML = '<div class="pulse"><span></span><span></span><span></span></div>';
+  document.getElementById('content').appendChild(loading);
+  loading.scrollIntoView({ behavior: 'smooth', block: 'end' });
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 300,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const data = await response.json();
+    loading.remove();
+
+    if (data.error) {
+      addCard(`Error: ${data.error.message}`, 'narration', '⚠ system');
+    } else {
+      const text = data.content[0].text;
+      addCard(text, cardType, label);
+
+      // Auto-speak if not muted (basic browser TTS)
+      if (!window.tabimuted) {
+        const u = new SpeechSynthesisUtterance(text);
+        u.rate = 0.95;
+        const voices = speechSynthesis.getVoices();
+        const v = voices.find(v => v.lang.startsWith('en') && v.localService) || voices[0];
+        if (v) u.voice = v;
+        speechSynthesis.speak(u);
+      }
+    }
+  } catch(err) {
+    loading.remove();
+    addCard(`Connection error: ${err.message}`, 'narration', '⚠ system');
+  }
+
+  isLoading = false;
+  document.getElementById('askBtn').disabled = false;
+}
+
+function addCard(text, type, label) {
+  const content = document.getElementById('content');
+  const card = document.createElement('div');
+  card.className = `narr-card ${type}`;
+  card.innerHTML = `<div class="card-label">${label}</div><div class="card-text">${text}</div>`;
+  content.appendChild(card);
+  card.scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+
+function clearContent() {
+  const content = document.getElementById('content');
+  content.innerHTML = '';
+}
+
+speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
+</script>
+
+</body>
+</html>
