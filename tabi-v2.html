@@ -112,10 +112,11 @@ border:2px solid var(–muted); flex-shrink:0; transition:all 0.3s;
 .stop-dot.visited { background:var(–ink); border-color:var(–ink); }
 .stop-line { width:24px; height:2px; background:var(–muted); }
 .stop-label {
-position:absolute; font-size:9px; color:var(–muted); white-space:nowrap;
-transform:translateX(-50%); top:16px; letter-spacing:0.04em;
+font-size:9px; color:var(–muted); white-space:nowrap;
+margin-top:4px; letter-spacing:0.04em; max-width:48px;
+overflow:hidden; text-overflow:ellipsis; text-align:center;
 }
-.stop-wrapper { position:relative; display:flex; flex-direction:column; align-items:center; }
+.stop-wrapper { position:relative; display:flex; flex-direction:column; align-items:center; min-width:40px; }
 .stop-wrapper.current .stop-label { color:var(–accent); font-weight:500; }
 
 /* Content */
@@ -261,6 +262,11 @@ letter-spacing:0.04em; cursor:pointer; text-align:center; transition:all 0.15s;
 <div id="startWrap" style="display:none;">
   <div class="setup-label">Boarding at</div>
   <select class="setup-input" id="startSelect"></select>
+</div>
+
+<div id="endWrap" style="display:none;">
+  <div class="setup-label">Alighting at</div>
+  <select class="setup-input" id="endSelect"></select>
 </div>
 
 <button class="btn-primary" id="startJourneyBtn" style="display:none;" onclick="startJourney()">Start journey →</button>
@@ -443,8 +449,20 @@ function updateStartStops() {
   selectedDirection = document.getElementById('directionSelect').value;
   const stopsForDir = line.stops[selectedDirection];
   const startSelect = document.getElementById('startSelect');
+  const endSelect = document.getElementById('endSelect');
   startSelect.innerHTML = stopsForDir.map((s,i) => `<option value="${i}">${s}</option>`).join('');
+  endSelect.innerHTML = stopsForDir.map((s,i) => `<option value="${i}">${s}</option>`).join('');
+  // Default end to last stop
+  endSelect.value = stopsForDir.length - 1;
+  // When start changes, update end options to only show stops after start
+  startSelect.onchange = () => {
+    const startIdx = parseInt(startSelect.value);
+    endSelect.innerHTML = stopsForDir
+      .map((s,i) => i > startIdx ? `<option value="${i}">${s}</option>` : '')
+      .join('');
+  };
   document.getElementById('startWrap').style.display = 'block';
+  document.getElementById('endWrap').style.display = 'block';
   document.getElementById('startJourneyBtn').style.display = 'block';
 }
 
@@ -452,8 +470,11 @@ function startJourney() {
   if (!selectedLine) { alert('Please select a line.'); return; }
   const line = LINES[selectedLine];
   selectedDirection = document.getElementById('directionSelect').value;
-  stops = line.stops[selectedDirection];
-  currentStopIndex = parseInt(document.getElementById('startSelect').value);
+  const allStops = line.stops[selectedDirection];
+  const startIdx = parseInt(document.getElementById('startSelect').value);
+  const endIdx = parseInt(document.getElementById('endSelect').value);
+  stops = allStops.slice(startIdx, endIdx + 1);
+  currentStopIndex = 0;
 
   // Update badge
   const badge = document.getElementById('lineBadge');
@@ -476,7 +497,7 @@ function renderJourneyStrip() {
     const wrapper = document.createElement('div');
     wrapper.className = 'stop-wrapper' + (i === currentStopIndex ? ' current' : '');
     wrapper.style.position = 'relative';
-    wrapper.style.paddingBottom = '18px';
+    wrapper.style.paddingBottom = '4px';
 
     const dot = document.createElement('div');
     dot.className = 'stop-dot' + (i === currentStopIndex ? ' current' : i < currentStopIndex ? ' visited' : '');
