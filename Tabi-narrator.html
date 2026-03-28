@@ -445,7 +445,7 @@
 
 <script>
   // ─── Config ───────────────────────────────────────────────────────
-  const NARRATION_INTERVAL_MS = 45000; // narrate every 45 seconds of movement
+  const NARRATION_INTERVAL_MS = 120000; // narrate every 45 seconds of movement
   const MOVEMENT_THRESHOLD_M = 80;     // meters moved before new narration
   const API_URL = 'https://api.anthropic.com/v1/messages';
 
@@ -545,7 +545,7 @@
       ? haversine(lastNarrationCoords, { latitude, longitude })
       : 999;
 
-    if (!isNarrating && (distMoved > MOVEMENT_THRESHOLD_M || timeSinceLast > NARRATION_INTERVAL_MS) && timeSinceLast > 20000) {
+    if (!isNarrating && (distMoved > MOVEMENT_THRESHOLD_M || timeSinceLast > NARRATION_INTERVAL_MS) && timeSinceLast > 10000) {
       lastNarrationCoords = { latitude, longitude };
       lastNarrationTime = now;
       fetchNarration(latitude, longitude);
