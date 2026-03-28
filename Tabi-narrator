@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Tabi — Train Narrator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;600&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap');
+
+  :root {
+    --ink: #1a1a18;
+    --paper: #f2ede4;
+    --accent: #c94f2a;
+    --muted: #8a8478;
+    --card: #ece7dc;
+    --listening: #2a7c5a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Header */
+  .header {
+    padding: 20px 24px 12px;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    border-bottom: 1px solid rgba(26,26,24,0.12);
+  }
+
+  .logo {
+    font-family: 'Shippori Mincho', serif;
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    color: var(--ink);
+  }
+
+  .logo span {
+    color: var(--accent);
+  }
+
+  .status-pill {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 3px 8px;
+    border: 1px solid currentColor;
+    border-radius: 20px;
+    transition: all 0.3s ease;
+  }
+
+  .status-pill.active {
+    color: var(--listening);
+    border-color: var(--listening);
+  }
+
+  .status-pill.narrating {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  /* Location bar */
+  .location-bar {
+    padding: 10px 24px;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid rgba(26,26,24,0.08);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 36px;
+  }
+
+  .location-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+    transition: background 0.3s;
+  }
+
+  .location-dot.active {
+    background: var(--listening);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* Main content area */
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* Narration card */
+  .narration-card {
+    background: var(--card);
+    border-radius: 2px;
+    padding: 20px;
+    border-left: 3px solid var(--accent);
+    animation: slideIn 0.4s ease;
+  }
+
+  .narration-card.query-result {
+    border-left-color: var(--listening);
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .card-label {
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  .card-text {
+    font-family: 'Shippori Mincho', serif;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--ink);
+  }
+
+  .card-coords {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 10px;
+    font-family: 'DM Mono', monospace;
+    font-style: italic;
+  }
+
+  /* Empty state */
+  .empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 12px;
+    padding: 40px;
+    opacity: 0.5;
+  }
+
+  .empty-icon {
+    font-size: 40px;
+    margin-bottom: 8px;
+  }
+
+  .empty-title {
+    font-family: 'Shippori Mincho', serif;
+    font-size: 18px;
+    color: var(--ink);
+  }
+
+  .empty-sub {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.6;
+    max-width: 240px;
+  }
+
+  /* Audio wave animation */
+  .wave {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    height: 20px;
+    margin-top: 12px;
+  }
+
+  .wave-bar {
+    width: 3px;
+    background: var(--accent);
+    border-radius: 2px;
+    animation: wave 1s ease-in-out infinite;
+  }
+
+  .wave-bar:nth-child(2) { animation-delay: 0.1s; }
+  .wave-bar:nth-child(3) { animation-delay: 0.2s; }
+  .wave-bar:nth-child(4) { animation-delay: 0.3s; }
+  .wave-bar:nth-child(5) { animation-delay: 0.4s; }
+
+  @keyframes wave {
+    0%, 100% { height: 4px; }
+    50% { height: 18px; }
+  }
+
+  /* Bottom controls */
+  .controls {
+    padding: 16px 24px 32px;
+    border-top: 1px solid rgba(26,26,24,0.12);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* Query input */
+  .query-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .query-input {
+    flex: 1;
+    background: var(--card);
+    border: 1px solid rgba(26,26,24,0.15);
+    border-radius: 2px;
+    padding: 10px 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .query-input::placeholder {
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  .query-input:focus {
+    border-color: var(--accent);
+  }
+
+  .query-btn {
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    border-radius: 2px;
+    padding: 10px 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+  }
+
+  .query-btn:hover { background: var(--accent); }
+  .query-btn:disabled { background: var(--muted); cursor: not-allowed; }
+
+  /* Main action row */
+  .action-row {
+    display: flex;
+    gap: 10px;
+  }
+
+  .start-btn {
+    flex: 1;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 2px;
+    padding: 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .start-btn:hover { filter: brightness(1.1); }
+
+  .start-btn.running {
+    background: var(--ink);
+  }
+
+  .mute-btn {
+    background: var(--card);
+    border: 1px solid rgba(26,26,24,0.15);
+    border-radius: 2px;
+    padding: 14px 16px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .mute-btn:hover { border-color: var(--ink); }
+
+  /* API key setup screen */
+  .setup-screen {
+    position: fixed;
+    inset: 0;
+    background: var(--paper);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 40px 24px;
+    gap: 24px;
+  }
+
+  .setup-title {
+    font-family: 'Shippori Mincho', serif;
+    font-size: 26px;
+    color: var(--ink);
+    line-height: 1.3;
+  }
+
+  .setup-sub {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  .setup-input {
+    background: var(--card);
+    border: 1px solid rgba(26,26,24,0.2);
+    border-radius: 2px;
+    padding: 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--ink);
+    outline: none;
+    width: 100%;
+  }
+
+  .setup-input:focus { border-color: var(--accent); }
+
+  .setup-btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 2px;
+    padding: 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    width: 100%;
+  }
+
+  .setup-warning {
+    font-size: 10px;
+    color: var(--muted);
+    line-height: 1.6;
+    padding: 12px;
+    border: 1px solid rgba(26,26,24,0.1);
+    border-radius: 2px;
+  }
+
+  .hidden { display: none !important; }
+
+  /* Loading dots */
+  .loading {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .loading span {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--muted);
+    animation: blink 1.2s infinite;
+  }
+
+  .loading span:nth-child(2) { animation-delay: 0.2s; }
+  .loading span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes blink {
+    0%, 80%, 100% { opacity: 0.2; }
+    40% { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Setup screen -->
+<div class="setup-screen" id="setupScreen">
+  <div>
+    <div class="logo">Tabi<span>.</span></div>
+    <div style="font-size:11px; color:var(--muted); margin-top:4px; letter-spacing:0.04em;">旅 — journey narrator</div>
+  </div>
+  <div class="setup-title">Your API key<br>lives here, not in chat.</div>
+  <div class="setup-sub">Paste your Anthropic API key below. It's stored only in your browser's local storage and never sent anywhere except directly to Anthropic's API.</div>
+  <input class="setup-input" type="password" id="apiKeyInput" placeholder="sk-ant-api03-..." autocomplete="off" spellcheck="false">
+  <div class="setup-warning">⚠ Never paste your API key into a chat window. This input goes directly into the app only.</div>
+  <button class="setup-btn" onclick="saveApiKey()">Start narrating →</button>
+</div>
+
+<!-- Main app -->
+<div id="mainApp" class="hidden" style="display:none; flex-direction:column; height:100dvh;">
+
+  <div class="header">
+    <div class="logo">Tabi<span>.</span></div>
+    <div class="status-pill" id="statusPill">idle</div>
+    <div style="margin-left:auto; font-size:10px; color:var(--muted); cursor:pointer;" onclick="clearApiKey()">⚙</div>
+  </div>
+
+  <div class="location-bar">
+    <div class="location-dot" id="locationDot"></div>
+    <span id="locationText">Location not yet acquired</span>
+  </div>
+
+  <div class="content" id="contentArea">
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">🚃</div>
+      <div class="empty-title">Ready to roll</div>
+      <div class="empty-sub">Press Start to begin narrating your journey. Move through the world and Tabi will talk.</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="query-row">
+      <input class="query-input" type="text" id="queryInput" placeholder="restaurants at next stop..." />
+      <button class="query-btn" id="queryBtn" onclick="submitQuery()">Ask</button>
+    </div>
+    <div class="action-row">
+      <button class="start-btn" id="startBtn" onclick="toggleNarration()">Start narrating</button>
+      <button class="mute-btn" id="muteBtn" onclick="toggleMute()" title="Toggle audio">🔊</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ─── Config ───────────────────────────────────────────────────────
+  const NARRATION_INTERVAL_MS = 45000; // narrate every 45 seconds of movement
+  const MOVEMENT_THRESHOLD_M = 80;     // meters moved before new narration
+  const API_URL = 'https://api.anthropic.com/v1/messages';
+
+  // ─── State ────────────────────────────────────────────────────────
+  let apiKey = '';
+  let isRunning = false;
+  let isMuted = false;
+  let watchId = null;
+  let lastNarrationCoords = null;
+  let lastNarrationTime = 0;
+  let currentUtterance = null;
+  let isNarrating = false;
+  let currentCoords = null;
+
+  // ─── Init ─────────────────────────────────────────────────────────
+  window.addEventListener('DOMContentLoaded', () => {
+    const saved = localStorage.getItem('tabi_api_key');
+    if (saved) {
+      apiKey = saved;
+      showMainApp();
+    }
+  });
+
+  function saveApiKey() {
+    const val = document.getElementById('apiKeyInput').value.trim();
+    if (!val.startsWith('sk-ant-')) {
+      alert('That doesn\'t look like an Anthropic API key. It should start with sk-ant-');
+      return;
+    }
+    apiKey = val;
+    localStorage.setItem('tabi_api_key', val);
+    showMainApp();
+  }
+
+  function clearApiKey() {
+    if (confirm('Reset API key?')) {
+      localStorage.removeItem('tabi_api_key');
+      location.reload();
+    }
+  }
+
+  function showMainApp() {
+    document.getElementById('setupScreen').classList.add('hidden');
+    const app = document.getElementById('mainApp');
+    app.classList.remove('hidden');
+    app.style.display = 'flex';
+  }
+
+  // ─── Narration control ────────────────────────────────────────────
+  function toggleNarration() {
+    if (!isRunning) {
+      startNarration();
+    } else {
+      stopNarration();
+    }
+  }
+
+  function startNarration() {
+    if (!navigator.geolocation) {
+      addCard('GPS not available in this browser.', 'system');
+      return;
+    }
+    isRunning = true;
+    updateUI();
+    watchId = navigator.geolocation.watchPosition(onPosition, onGeoError, {
+      enableHighAccuracy: true,
+      maximumAge: 10000,
+      timeout: 15000
+    });
+  }
+
+  function stopNarration() {
+    isRunning = false;
+    if (watchId !== null) {
+      navigator.geolocation.clearWatch(watchId);
+      watchId = null;
+    }
+    if (currentUtterance) {
+      speechSynthesis.cancel();
+    }
+    updateUI();
+  }
+
+  function onPosition(pos) {
+    const { latitude, longitude, accuracy } = pos.coords;
+    currentCoords = { latitude, longitude };
+
+    // Update location bar
+    document.getElementById('locationDot').classList.add('active');
+    document.getElementById('locationText').textContent =
+      `${latitude.toFixed(5)}, ${longitude.toFixed(5)}  ·  ±${Math.round(accuracy)}m`;
+
+    // Check if we've moved enough and enough time has passed
+    const now = Date.now();
+    const timeSinceLast = now - lastNarrationTime;
+    const distMoved = lastNarrationCoords
+      ? haversine(lastNarrationCoords, { latitude, longitude })
+      : 999;
+
+    if (!isNarrating && (distMoved > MOVEMENT_THRESHOLD_M || timeSinceLast > NARRATION_INTERVAL_MS) && timeSinceLast > 20000) {
+      lastNarrationCoords = { latitude, longitude };
+      lastNarrationTime = now;
+      fetchNarration(latitude, longitude);
+    }
+  }
+
+  function onGeoError(err) {
+    addCard(`Location error: ${err.message}`, 'system');
+  }
+
+  // ─── Claude API ───────────────────────────────────────────────────
+  async function fetchNarration(lat, lng) {
+    isNarrating = true;
+    setStatus('narrating');
+
+    const prompt = `You are Tabi, a witty and knowledgeable travel narrator for someone on a train or moving through a city. 
+
+The person is currently at coordinates: ${lat.toFixed(5)}, ${lng.toFixed(5)}.
+
+Give a short, engaging narration (2-4 sentences max) about what's historically, culturally, or practically interesting near these coordinates. Be specific if you know the area. Include one surprising or little-known fact if possible. Keep it conversational and warm, like a knowledgeable friend talking to you — not a textbook. If you don't know the exact area well, describe what region/city this likely is and something interesting about it.
+
+Respond with ONLY the narration text. No preamble, no labels.`;
+
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 200,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        addCard(`API error: ${data.error.message}`, 'system');
+        isNarrating = false;
+        setStatus('active');
+        return;
+      }
+
+      const text = data.content[0].text;
+      addCard(text, 'narration', `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+      speak(text, () => {
+        isNarrating = false;
+        setStatus('active');
+      });
+
+    } catch (err) {
+      addCard(`Connection error: ${err.message}`, 'system');
+      isNarrating = false;
+      setStatus('active');
+    }
+  }
+
+  async function submitQuery() {
+    const input = document.getElementById('queryInput');
+    const query = input.value.trim();
+    if (!query) return;
+
+    const coordsText = currentCoords
+      ? `Current location: ${currentCoords.latitude.toFixed(5)}, ${currentCoords.longitude.toFixed(5)}.`
+      : 'Location unknown.';
+
+    input.value = '';
+    document.getElementById('queryBtn').disabled = true;
+
+    const prompt = `You are Tabi, a helpful travel companion on a train journey. ${coordsText}
+
+The traveler asks: "${query}"
+
+Answer helpfully and concisely (3-5 sentences max). If they're asking about restaurants, food, toilets, transport, or practical info near their location, give your best answer based on the area. Be warm and direct. If you don't know specific current businesses, give useful general guidance for the area or station they're likely near.
+
+Respond with ONLY your answer. No preamble.`;
+
+    try {
+      setStatus('narrating');
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 300,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        addCard(`API error: ${data.error.message}`, 'system');
+      } else {
+        const text = data.content[0].text;
+        addCard(text, 'query', `Re: "${query}"`);
+        speak(text);
+      }
+    } catch (err) {
+      addCard(`Error: ${err.message}`, 'system');
+    }
+
+    document.getElementById('queryBtn').disabled = false;
+    setStatus(isRunning ? 'active' : 'idle');
+  }
+
+  // Allow Enter key in query input
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('queryInput')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') submitQuery();
+    });
+  });
+
+  // ─── Speech synthesis ─────────────────────────────────────────────
+  function speak(text, onEnd) {
+    if (isMuted) {
+      if (onEnd) onEnd();
+      return;
+    }
+    speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.95;
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+
+    // Try to pick a natural voice
+    const voices = speechSynthesis.getVoices();
+    const preferred = voices.find(v =>
+      v.name.includes('Samantha') ||
+      v.name.includes('Karen') ||
+      v.name.includes('Moira') ||
+      v.name.includes('Daniel') ||
+      (v.lang === 'en-GB' && v.localService)
+    ) || voices.find(v => v.lang.startsWith('en') && v.localService) || voices[0];
+
+    if (preferred) utterance.voice = preferred;
+    if (onEnd) utterance.onend = onEnd;
+    currentUtterance = utterance;
+    speechSynthesis.speak(utterance);
+  }
+
+  function toggleMute() {
+    isMuted = !isMuted;
+    document.getElementById('muteBtn').textContent = isMuted ? '🔇' : '🔊';
+    if (isMuted) speechSynthesis.cancel();
+  }
+
+  // ─── UI helpers ───────────────────────────────────────────────────
+  function addCard(text, type = 'narration', subtitle = '') {
+    const empty = document.getElementById('emptyState');
+    if (empty) empty.remove();
+
+    const content = document.getElementById('contentArea');
+    const card = document.createElement('div');
+    card.className = `narration-card${type === 'query' ? ' query-result' : ''}`;
+
+    const label = type === 'narration' ? '📍 nearby' : type === 'query' ? '💬 you asked' : '⚙ system';
+
+    card.innerHTML = `
+      <div class="card-label">${label}</div>
+      <div class="card-text">${text}</div>
+      ${subtitle ? `<div class="card-coords">${subtitle}</div>` : ''}
+    `;
+
+    content.appendChild(card);
+    card.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }
+
+  function setStatus(status) {
+    const pill = document.getElementById('statusPill');
+    pill.textContent = status;
+    pill.className = 'status-pill' + (status === 'active' ? ' active' : status === 'narrating' ? ' narrating' : '');
+  }
+
+  function updateUI() {
+    const btn = document.getElementById('startBtn');
+    btn.textContent = isRunning ? 'Stop narrating' : 'Start narrating';
+    btn.className = 'start-btn' + (isRunning ? ' running' : '');
+    setStatus(isRunning ? 'active' : 'idle');
+    if (!isRunning) {
+      document.getElementById('locationDot').classList.remove('active');
+    }
+  }
+
+  // ─── Haversine distance (meters) ─────────────────────────────────
+  function haversine(a, b) {
+    const R = 6371000;
+    const dLat = (b.latitude - a.latitude) * Math.PI / 180;
+    const dLon = (b.longitude - a.longitude) * Math.PI / 180;
+    const lat1 = a.latitude * Math.PI / 180;
+    const lat2 = b.latitude * Math.PI / 180;
+    const x = Math.sin(dLat/2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon/2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1-x));
+  }
+
+  // Load voices async (Chrome fix)
+  speechSynthesis.onvoiceschanged = () => { speechSynthesis.getVoices(); };
+</script>
+</body>
+</html>
