@@ -9,25 +9,28 @@
 @import url('https://fonts.googleapis.com/css2?family=Zen+Antique&family=DM+Mono:ital,wght@0,300;0,400;1,300&family=Shippori+Mincho:wght@400;600&display=swap');
 
 :root {
-–ink: #1a1814;
-–paper: #f2ece0;
-–card: #e9e2d2;
-–deep: #2c2820;
-–accent: #c0392b;
-–gold: #b07d2a;
-–teal: #2a6e62;
-–muted: #7a7060;
-–border: rgba(26,24,20,0.13);
-–shrine: #8b1a1a;
-–sea: #1a5276;
+–ink: #f0ead8;
+–paper: #141210;
+–card: #1f1c18;
+–deep: #0e0c0a;
+–accent: #e8533a;
+–gold: #e8b84b;
+–teal: #4dbfa8;
+–muted: #a09880;
+–border: rgba(240,234,216,0.12);
+–shrine: #e05555;
+–sea: #5b9bd5;
 }
 
 - { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+html { font-size: 22px; }
 
 body {
 background: var(–paper);
 color: var(–ink);
 font-family: ‘DM Mono’, monospace;
+font-size: 20px;
 min-height: 100dvh;
 display: flex;
 flex-direction: column;
@@ -212,7 +215,7 @@ min-width: 60px;
 .lm-item.active { border-bottom-color: var(–gold); }
 .lm-icon { font-size: 16px; }
 .lm-name {
-font-size: 8px;
+font-size: 10px;
 color: rgba(242,236,224,0.5);
 white-space: nowrap;
 text-align: center;
@@ -224,7 +227,7 @@ text-overflow: ellipsis;
 .lm-item.active .lm-name { color: var(–gold); }
 .lm-item.nearby .lm-name { color: rgba(242,236,224,0.85); }
 .lm-dist {
-font-size: 7px;
+font-size: 9px;
 color: rgba(242,236,224,0.35);
 }
 .lm-item.nearby .lm-dist { color: #27ae60; }
@@ -258,7 +261,7 @@ background: radial-gradient(circle, rgba(176,125,42,0.15) 0%, transparent 70%);
 pointer-events: none;
 }
 .ph-category {
-font-size: 8px;
+font-size: 11px;
 letter-spacing: 0.18em;
 text-transform: uppercase;
 color: var(–gold);
@@ -266,19 +269,19 @@ margin-bottom: 6px;
 }
 .ph-name {
 font-family: ‘Zen Antique’, serif;
-font-size: 26px;
+font-size: 30px;
 line-height: 1.2;
 margin-bottom: 4px;
 }
 .ph-jp {
 font-family: ‘Shippori Mincho’, serif;
-font-size: 14px;
-color: rgba(242,236,224,0.45);
+font-size: 16px;
+color: rgba(240,234,216,0.45);
 margin-bottom: 10px;
 }
 .ph-dist {
-font-size: 10px;
-color: rgba(242,236,224,0.5);
+font-size: 13px;
+color: rgba(240,234,216,0.5);
 display: flex;
 align-items: center;
 gap: 6px;
@@ -287,7 +290,7 @@ gap: 6px;
 background: rgba(255,255,255,0.1);
 padding: 2px 8px;
 border-radius: 20px;
-font-size: 9px;
+font-size: 11px;
 }
 
 /* Narration cards */
@@ -305,19 +308,19 @@ animation: fadeUp 0.35s ease;
 .narr-card.query { border-left-color: var(–accent); }
 
 .card-label {
-font-size: 8px;
+font-size: 13px;
 letter-spacing: 0.12em;
 text-transform: uppercase;
 color: var(–muted);
-margin-bottom: 8px;
+margin-bottom: 10px;
 display: flex;
 align-items: center;
 gap: 5px;
 }
 .card-text {
 font-family: ‘Shippori Mincho’, serif;
-font-size: 14px;
-line-height: 1.8;
+font-size: 20px;
+line-height: 1.9;
 color: var(–ink);
 }
 
@@ -392,19 +395,19 @@ border-radius: 1px;
 .jp-phrase-row:active { background: rgba(255,255,255,0.04); }
 .phrase-jp {
 font-family: ‘Zen Antique’, serif;
-font-size: 15px;
-color: var(–paper);
+font-size: 24px;
+color: var(–ink);
 line-height: 1.4;
 }
 .phrase-romaji {
-font-size: 9px;
+font-size: 15px;
 color: var(–teal);
-margin-top: 2px;
+margin-top: 3px;
 font-style: italic;
 }
 .phrase-en {
-font-size: 10px;
-color: rgba(242,236,224,0.5);
+font-size: 15px;
+color: rgba(240,234,216,0.65);
 line-height: 1.5;
 align-self: center;
 }
@@ -470,9 +473,9 @@ flex: 1;
 background: var(–card);
 border: 1px solid var(–border);
 border-radius: 1px;
-padding: 10px 12px;
+padding: 14px 16px;
 font-family: ‘DM Mono’, monospace;
-font-size: 12px;
+font-size: 17px;
 color: var(–ink);
 outline: none;
 }
@@ -483,9 +486,9 @@ background: var(–ink);
 color: var(–paper);
 border: none;
 border-radius: 1px;
-padding: 10px 14px;
+padding: 14px 18px;
 font-family: ‘DM Mono’, monospace;
-font-size: 11px;
+font-size: 16px;
 cursor: pointer;
 transition: background 0.15s;
 }
@@ -497,15 +500,15 @@ transition: background 0.15s;
 background: var(–card);
 border: 1px solid var(–border);
 border-radius: 1px;
-padding: 10px 6px;
+padding: 14px 6px;
 font-family: ‘DM Mono’, monospace;
-font-size: 9px;
-letter-spacing: 0.04em;
+font-size: 14px;
+letter-spacing: 0.03em;
 cursor: pointer;
 text-align: center;
 transition: all 0.15s;
 color: var(–ink);
-line-height: 1.4;
+line-height: 1.5;
 }
 .action-btn:hover { border-color: var(–ink); }
 .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
